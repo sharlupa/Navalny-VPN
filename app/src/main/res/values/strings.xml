@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Navalny VPN</string>
+    <string name="notification_channel">VPN-подключение</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Главная</string>
+    <string name="tab_exclusions">Исключения</string>
+    <string name="tab_settings">Настройки</string>
+
+    <!-- Status -->
+    <string name="status_disconnected">Не подключено</string>
+    <string name="status_connecting">Подключение…</string>
+    <string name="status_connected">Подключено</string>
+    <string name="status_stopping">Отключение…</string>
+    <string name="status_error">Ошибка: %1$s</string>
+    <string name="action_connect">Подключить</string>
+    <string name="action_disconnect">Отключить</string>
+
+    <!-- Errors -->
+    <string name="error_no_server">Сначала добавьте сервер или подписку</string>
+    <string name="error_no_permission">Нет разрешения на VPN</string>
+
+    <!-- Home -->
+    <string name="server_add_title">Добавить сервер</string>
+    <string name="server_add_subtitle">Ссылка Hysteria2 / VLESS или подписка</string>
+    <string name="session_time">Время сессии</string>
+    <string name="traffic_download">Загрузка</string>
+    <string name="traffic_upload">Отдача</string>
+    <string name="traffic_total">Всего: %1$s</string>
+    <string name="traffic_chart">Трафик за минуту</string>
+    <string name="traffic_chart_hint">График появится после подключения</string>
+
+    <!-- Servers sheet -->
+    <string name="servers_title">Серверы</string>
+    <string name="servers_own">Мои серверы</string>
+    <string name="servers_empty">Пока нет серверов. Скопируйте ссылку hysteria2:// или vless:// либо адрес подписки и нажмите «Из буфера».</string>
+    <string name="import_clipboard">Из буфера</string>
+    <string name="import_manual">Добавить</string>
+    <string name="import_manual_title">Сервер или подписка</string>
+    <string name="import_manual_hint">Вставьте ссылку hysteria2://, hy2://, vless:// или адрес подписки (https://…)</string>
+    <string name="import_field">Ссылка</string>
+    <string name="import_nothing">Не найдено ссылок Hysteria2 / VLESS</string>
+    <string name="import_done">Добавлено серверов: %1$d</string>
+    <string name="subscription_name">Название (необязательно)</string>
+    <string name="subscription_updated">Подписка обновлена: %1$d серверов</string>
+    <string name="subscription_error">Не удалось обновить подписку: %1$s</string>
+    <string name="subscription_update">Обновить подписку</string>
+    <string name="subscription_update_all">Обновить все подписки</string>
+    <string name="subscription_expires">до %1$s</string>
+    <string name="subscription_delete_title">Удалить подписку?</string>
+    <string name="subscription_delete_text">Подписка «%1$s» и все её серверы будут удалены.</string>
+    <string name="copy_link">Копировать ссылку</string>
+    <string name="delete">Удалить</string>
+    <string name="cancel">Отмена</string>
+    <string name="add">Добавить</string>
+    <string name="save">Сохранить</string>
+    <string name="reset">По умолчанию</string>
+    <string name="apply">Применить</string>
+    <string name="back">Назад</string>
+
+    <!-- Exclusions -->
+    <string name="exclusions_subtitle">Без VPN: %1$d</string>
+    <string name="exclusions_search">Поиск приложений</string>
+    <string name="exclusions_show_system">Системные</string>
+    <string name="exclusions_clear">Сбросить</string>
+    <string name="exclusions_empty">Ничего не найдено</string>
+
+    <!-- Settings -->
+    <string name="settings_group_battery">Энергосбережение</string>
+    <string name="settings_battery_saver">Экономия батареи</string>
+    <string name="settings_battery_saver_desc">Редкие keep-alive (раз в ~1 мин вместо 10 с), короткие UDP-сессии, редкая смена портов. Модем дольше спит.</string>
+    <string name="settings_group_connection">Подключение</string>
+    <string name="settings_stack">Сетевой стек</string>
+    <string name="settings_stack_desc">System — меньше всего нагружает процессор</string>
+    <string name="settings_dns">DNS-сервер</string>
+    <string name="settings_dns_hint">1.1.1.1, tls://1.1.1.1, https://1.1.1.1/dns-query</string>
+    <string name="settings_bypass_lan">Локальная сеть без VPN</string>
+    <string name="settings_bypass_lan_desc">Роутер, принтеры и Chromecast доступны напрямую</string>
+    <string name="settings_ipv6">IPv6</string>
+    <string name="settings_ipv6_desc">Выключено — вдвое меньше DNS-запросов</string>
+    <string name="settings_mtu">MTU туннеля</string>
+    <string name="settings_group_subscriptions">Подписки</string>
+    <string name="settings_auto_update">Автообновление подписок</string>
+    <string name="settings_auto_update_desc">При запуске приложения, если прошло больше 12 часов. Без фоновых задач.</string>
+    <string name="settings_group_appearance">Оформление</string>
+    <string name="settings_theme">Тема</string>
+    <string name="theme_system">Система</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="settings_dynamic_color">Цвета обоев</string>
+    <string name="settings_dynamic_color_desc">Material You</string>
+    <string name="settings_group_system">Система</string>
+    <string name="settings_always_on">Постоянная VPN</string>
+    <string name="settings_always_on_desc">Автозапуск и блокировка без VPN — в настройках Android</string>
+    <string name="settings_group_about">Приложение</string>
+
+    <!-- About -->
+    <string name="about_title">О приложении</string>
+    <string name="about_subtitle">Версия, ядро, лицензия</string>
+    <string name="about_version">Версия %1$s</string>
+    <string name="about_description">Лёгкий VPN-клиент для Hysteria2 и VLESS + REALITY. Сделан так, чтобы почти не тратить батарею: никаких фоновых задач и таймеров, ядро загружается только при подключении.</string>
+    <string name="about_core">Ядро</string>
+    <string name="about_source">Исходный код</string>
+    <string name="about_license">Лицензия</string>
+</resources>

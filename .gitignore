@@ -1,0 +1,17 @@
+*.iml
+.gradle/
+.kotlin/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/captures
+.externalNativeBuild
+.cxx
+app/build/
+# libbox.aar is built by scripts/build-libbox.sh (or CI) — not committed
+app/libs/*.aar
+app/libs/*.jar
+*.jks
+*.keystore
+keystore.properties
