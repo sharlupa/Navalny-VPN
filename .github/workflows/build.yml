@@ -6,10 +6,16 @@ on:
     # Pushing a tag like v1.0.0 builds the APKs and publishes a GitHub Release with them.
     tags: [ "v*" ]
   pull_request:
+  # Manual run: Actions → Build → Run workflow → enter a version (e.g. 1.0.0) to publish a release.
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Версия релиза, например 1.0.0 (пусто — просто сборка)"
+        required: false
+        default: ""
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 env:
@@ -24,6 +30,21 @@ jobs:
       contents: write   # needed to create the GitHub Release on tag builds
     steps:
       - uses: actions/checkout@v5
+
+      - name: Release version
+        env:
+          INPUT_RELEASE: ${{ github.event.inputs.release }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="$GITHUB_REF_NAME"
+          elif [[ -n "$INPUT_RELEASE" ]]; then
+            TAG="v${INPUT_RELEASE#v}"
+          fi
+          if [[ -n "${TAG:-}" ]]; then
+            echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+            echo "VERSION_NAME=${TAG#v}" >> "$GITHUB_ENV"
+          fi
+          echo "VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
 
       - uses: actions/setup-java@v5
         with:
@@ -77,10 +98,7 @@ jobs:
         run: ./gradlew :app:testDebugUnitTest
 
       - name: Assemble release APKs
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then export VERSION_NAME="${GITHUB_REF_NAME#v}"; fi
-          export VERSION_CODE="$GITHUB_RUN_NUMBER"
-          ./gradlew :app:assembleRelease
+        run: ./gradlew :app:assembleRelease
 
       - uses: actions/upload-artifact@v5
         with:
@@ -94,20 +112,21 @@ jobs:
           path: app/libs/libbox.aar
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: env.RELEASE_TAG != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           mkdir -p dist
           for f in app/build/outputs/apk/release/*.apk; do
             abi="$(basename "$f" .apk)"; abi="${abi#app-}"; abi="${abi%-release}"
             cp "$f" "dist/NavalnyVPN-${VERSION}-${abi}.apk"
           done
           (cd dist && sha256sum *.apk > SHA256SUMS.txt)
-          NOTES=".github/release-notes/${GITHUB_REF_NAME}.md"
+          NOTES=".github/release-notes/${RELEASE_TAG}.md"
           [ -f "$NOTES" ] || NOTES=".github/release-notes/default.md"
-          gh release create "$GITHUB_REF_NAME" dist/* \
+          # creates the tag on GitHub if it does not exist yet
+          gh release create "$RELEASE_TAG" dist/* \
             --title "Navalny VPN ${VERSION}" \
             --notes-file "$NOTES" \
             --target "$GITHUB_SHA"
