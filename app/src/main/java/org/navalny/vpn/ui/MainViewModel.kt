@@ -305,6 +305,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // endregion
 
+    fun showMessage(text: String) = toast(text)
+
     private fun toast(res: Int) = toast(app.getString(res))
     private fun toast(text: String) {
         _messages.tryEmit(text)

@@ -106,6 +106,11 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.graphics.shapes)
 
+    // QR: camera scanner (no Google Play Services needed) + decoding from gallery images.
+    // The camera is only open while the scanner screen is shown.
+    implementation(libs.zxing.embedded) { isTransitive = false }
+    implementation(libs.zxing.core)
+
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)

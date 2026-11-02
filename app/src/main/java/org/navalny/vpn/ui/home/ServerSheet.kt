@@ -3,7 +3,11 @@ package org.navalny.vpn.ui.home
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +24,9 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RssFeed
@@ -29,6 +36,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItemDefaults
@@ -45,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,10 +62,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import kotlinx.coroutines.launch
 import org.navalny.vpn.R
 import org.navalny.vpn.core.ServerProfile
 import org.navalny.vpn.core.Subscription
 import org.navalny.vpn.ui.MainViewModel
+import org.navalny.vpn.ui.components.QrDecoder
 import org.navalny.vpn.ui.components.formatBytes
 import java.text.DateFormat
 import java.util.Date
@@ -69,6 +82,22 @@ fun ServerSheet(vm: MainViewModel, onDismiss: () -> Unit) {
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
     var confirmDeleteSub by remember { mutableStateOf<Subscription?>(null) }
+    var qrMenu by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    // Camera scanner (ZXing). The camera is opened only on this screen and released on exit.
+    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        result.contents?.let(vm::importText)
+    }
+    // QR from a picture (screenshot of a subscription QR etc.) — system photo picker, no permission.
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val text = QrDecoder.decode(context, uri)
+                if (text.isNullOrBlank()) vm.showMessage(context.getString(R.string.qr_not_found)) else vm.importText(text)
+            }
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(Modifier.padding(horizontal = 16.dp)) {
@@ -86,10 +115,39 @@ fun ServerSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(stringResource(R.string.import_clipboard))
                 }
-                FilledTonalButton(onClick = { showAddDialog = true }, shapes = ButtonDefaults.shapes()) {
-                    Icon(Icons.Rounded.Add, null, Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(stringResource(R.string.import_manual))
+                Box {
+                    FilledTonalButton(onClick = { qrMenu = true }, shapes = ButtonDefaults.shapes()) {
+                        Icon(Icons.Rounded.QrCodeScanner, null, Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                        Text(stringResource(R.string.import_qr))
+                    }
+                    DropdownMenu(expanded = qrMenu, onDismissRequest = { qrMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.qr_camera)) },
+                            leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) },
+                            onClick = {
+                                qrMenu = false
+                                scanLauncher.launch(
+                                    ScanOptions()
+                                        .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                        .setPrompt(context.getString(R.string.qr_prompt))
+                                        .setBeepEnabled(false)
+                                        .setOrientationLocked(false),
+                                )
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.qr_gallery)) },
+                            leadingIcon = { Icon(Icons.Rounded.Image, null) },
+                            onClick = {
+                                qrMenu = false
+                                imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            },
+                        )
+                    }
+                }
+                FilledTonalIconButton(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Rounded.Add, stringResource(R.string.import_manual))
                 }
                 Spacer(Modifier.weight(1f))
                 if (state.subscriptions.isNotEmpty()) {

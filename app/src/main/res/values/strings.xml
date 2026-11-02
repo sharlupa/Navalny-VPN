@@ -34,9 +34,14 @@
     <!-- Servers sheet -->
     <string name="servers_title">Серверы</string>
     <string name="servers_own">Мои серверы</string>
-    <string name="servers_empty">Пока нет серверов. Скопируйте ссылку hysteria2:// или vless:// либо адрес подписки и нажмите «Из буфера».</string>
+    <string name="servers_empty">Пока нет серверов. Скопируйте ссылку hysteria2:// или vless:// либо адрес подписки и нажмите «Из буфера» или отсканируйте QR-код.</string>
     <string name="import_clipboard">Из буфера</string>
     <string name="import_manual">Добавить</string>
+    <string name="import_qr">QR-код</string>
+    <string name="qr_camera">Сканировать камерой</string>
+    <string name="qr_gallery">Из изображения</string>
+    <string name="qr_prompt">Наведите камеру на QR-код сервера или подписки</string>
+    <string name="qr_not_found">QR-код на изображении не найден</string>
     <string name="import_manual_title">Сервер или подписка</string>
     <string name="import_manual_hint">Вставьте ссылку hysteria2://, hy2://, vless:// или адрес подписки (https://…)</string>
     <string name="import_field">Ссылка</string>

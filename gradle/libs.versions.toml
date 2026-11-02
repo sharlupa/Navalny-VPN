@@ -11,6 +11,8 @@ datastore = "1.3.0"
 coroutines = "1.11.0"
 graphicsShapes = "1.0.1"
 junit = "4.13.2"
+zxingEmbedded = "4.3.0"
+zxingCore = "3.5.4"
 orgJson = "20260814"
 
 [libraries]
@@ -29,6 +31,8 @@ compose-material3 = { module = "androidx.compose.material3:material3", version.r
 compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphicsShapes" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+zxing-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingEmbedded" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxingCore" }
 junit = { module = "junit:junit", version.ref = "junit" }
 org-json = { module = "org.json:json", version.ref = "orgJson" }
 
