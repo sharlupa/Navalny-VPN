@@ -12,7 +12,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
+enum class ThemeMode { SYSTEM, LIGHT, DARK, AMOLED }
+
+/** Color palettes. DYNAMIC = Material You (wallpaper colors, Android 12+). */
+enum class Palette(val seed: Long) {
+    DYNAMIC(0xFF3D5AFE),
+    INDIGO(0xFF3D5AFE),
+    SUNSET(0xFFFF6E40),
+    FOREST(0xFF2E7D32),
+    PURPLE(0xFF7C4DFF),
+    OCEAN(0xFF0091EA),
+    ROSE(0xFFE91E63),
+}
 
 /** TUN network stack. `system` is the cheapest on CPU (kernel TCP), hence the default. */
 enum class TunStack(val value: String, val title: String) {
@@ -31,10 +42,15 @@ data class AppSettings(
     val mtu: Int = 9000,
     val autoUpdateSubscriptions: Boolean = true,
     val theme: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColor: Boolean = true,
+    val palette: Palette = defaultPalette(),
+    /** Ambient (looping) animations of the connect button / server card. */
+    val animations: Boolean = true,
 ) {
     companion object {
         const val DEFAULT_DNS = "https://1.1.1.1/dns-query"
+
+        fun defaultPalette() =
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) Palette.DYNAMIC else Palette.INDIGO
     }
 }
 
@@ -51,7 +67,9 @@ class SettingsRepository(private val context: Context) {
         val mtu = intPreferencesKey("mtu")
         val autoUpdate = booleanPreferencesKey("auto_update_subs")
         val theme = stringPreferencesKey("theme")
-        val dynamicColor = booleanPreferencesKey("dynamic_color")
+        val dynamicColor = booleanPreferencesKey("dynamic_color") // legacy (v1.0)
+        val palette = stringPreferencesKey("palette")
+        val animations = booleanPreferencesKey("animations")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { it.toSettings() }
@@ -70,7 +88,9 @@ class SettingsRepository(private val context: Context) {
             mtu = this[Keys.mtu] ?: d.mtu,
             autoUpdateSubscriptions = this[Keys.autoUpdate] ?: d.autoUpdateSubscriptions,
             theme = ThemeMode.entries.firstOrNull { it.name == this[Keys.theme] } ?: d.theme,
-            dynamicColor = this[Keys.dynamicColor] ?: d.dynamicColor,
+            palette = Palette.entries.firstOrNull { it.name == this[Keys.palette] }
+                ?: if (this[Keys.dynamicColor] == false) Palette.INDIGO else d.palette,
+            animations = this[Keys.animations] ?: d.animations,
         )
     }
 
@@ -88,5 +108,6 @@ class SettingsRepository(private val context: Context) {
     suspend fun setMtu(v: Int) = context.dataStore.edit { it[Keys.mtu] = v }
     suspend fun setAutoUpdate(v: Boolean) = context.dataStore.edit { it[Keys.autoUpdate] = v }
     suspend fun setTheme(v: ThemeMode) = context.dataStore.edit { it[Keys.theme] = v.name }
-    suspend fun setDynamicColor(v: Boolean) = context.dataStore.edit { it[Keys.dynamicColor] = v }
+    suspend fun setPalette(v: Palette) = context.dataStore.edit { it[Keys.palette] = v.name }
+    suspend fun setAnimations(v: Boolean) = context.dataStore.edit { it[Keys.animations] = v }
 }

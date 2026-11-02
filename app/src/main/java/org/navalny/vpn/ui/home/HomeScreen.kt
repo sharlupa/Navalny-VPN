@@ -1,6 +1,22 @@
 package org.navalny.vpn.ui.home
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.Dp
+import org.navalny.vpn.ui.components.MorphingShape
+import org.navalny.vpn.ui.components.Shapes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -27,7 +43,6 @@ import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -65,6 +80,7 @@ fun HomeScreen(
 ) {
     val status by vm.status.collectAsStateWithLifecycle()
     val profiles by vm.profiles.collectAsStateWithLifecycle()
+    val settings by vm.settings.collectAsStateWithLifecycle()
     // Both flows below stop ticking as soon as the app is not visible.
     val traffic by vm.traffic.collectAsStateWithLifecycle(initialValue = null)
     val duration by vm.sessionDuration.collectAsStateWithLifecycle(initialValue = null)
@@ -89,6 +105,9 @@ fun HomeScreen(
         // 1. Server / subscription picker — above the connect button
         ServerSelector(
             server = profiles.selected,
+            connected = status is VpnStatus.Connected,
+            expanded = showServers,
+            animate = settings.animations,
             onClick = { showServers = true },
             modifier = Modifier.widthIn(max = 480.dp),
         )
@@ -98,6 +117,7 @@ fun HomeScreen(
         // 2. Connect button
         ConnectButton(
             status = status,
+            animate = settings.animations,
             onClick = {
                 if (status is VpnStatus.Connected) vm.disconnect() else onConnectClick()
             },
@@ -153,51 +173,126 @@ private fun StatusLine(status: VpnStatus) {
     }
 }
 
+/**
+ * Server picker card. Expressive details:
+ *  - the icon container keeps morphing (Cookie → Gem → Clover → Pentagon) and turns into a soft
+ *    burst while connected;
+ *  - on press the card corners "squish" (shape morph) and the card shrinks a little;
+ *  - switching servers pops the icon and slides the text;
+ *  - the chevron flips while the server sheet is open.
+ */
 @Composable
-private fun ServerSelector(server: ServerProfile?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ServerSelector(
+    server: ServerProfile?,
+    connected: Boolean,
+    expanded: Boolean,
+    animate: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Dp>()
+    val corner by animateDpAsState(if (pressed) 14.dp else 28.dp, spatial, label = "corner")
+    val scale by animateFloatAsState(
+        if (pressed) 0.97f else 1f,
+        MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "scale",
+    )
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Color>()
+    val colors = MaterialTheme.colorScheme
+    val container by animateColorAsState(
+        if (connected) colors.primaryContainer else colors.surfaceContainerHigh, effects, label = "card",
+    )
+    val iconBg by animateColorAsState(
+        if (connected) colors.primary else colors.secondaryContainer, effects, label = "iconBg",
+    )
+    val iconFg by animateColorAsState(
+        if (connected) colors.onPrimary else colors.onSecondaryContainer, effects, label = "iconFg",
+    )
+    val titleColor by animateColorAsState(
+        if (connected) colors.onPrimaryContainer else colors.onSurface, effects, label = "title",
+    )
+    val subtitleColor by animateColorAsState(
+        if (connected) colors.onPrimaryContainer.copy(alpha = 0.78f) else colors.onSurfaceVariant, effects, label = "subtitle",
+    )
+    val chevron by animateFloatAsState(
+        if (expanded) 180f else 0f,
+        MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "chevron",
+    )
+    // "pop" of the icon when another server gets selected
+    val pop = remember { Animatable(1f) }
+    LaunchedEffect(server?.id) {
+        pop.snapTo(0.6f)
+        pop.animateTo(1f, spring(dampingRatio = 0.4f, stiffness = 300f))
+    }
+
     Surface(
         onClick = onClick,
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(corner),
+        color = container,
+        interactionSource = interaction,
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer { scaleX = scale; scaleY = scale },
     ) {
         Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                Modifier
-                    .size(44.dp)
-                    .clip(MaterialShapes.Cookie4Sided.toShape())
-                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                contentAlignment = Alignment.Center,
+            MorphingShape(
+                shapes = if (connected) Shapes.ServerOn else Shapes.ServerIdle,
+                color = iconBg,
+                animate = animate,
+                holdMillis = 2800,
+                rotationMillis = 20000,
+                modifier = Modifier
+                    .size(52.dp)
+                    .graphicsLayer { scaleX = pop.value; scaleY = pop.value },
             ) {
                 Icon(
-                    if (server == null) Icons.Rounded.Add else Icons.Rounded.Dns,
+                    when {
+                        server == null -> Icons.Rounded.Add
+                        connected -> Icons.Rounded.Shield
+                        else -> Icons.Rounded.Dns
+                    },
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    tint = iconFg,
                 )
             }
             Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    server?.name ?: stringResource(R.string.server_add_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    server?.subtitle ?: stringResource(R.string.server_add_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            AnimatedContent(
+                targetState = server,
+                contentKey = { it?.id },
+                transitionSpec = {
+                    (slideInVertically { it / 2 } + fadeIn()) togetherWith (slideOutVertically { -it / 2 } + fadeOut())
+                },
+                label = "server",
+                modifier = Modifier.weight(1f),
+            ) { s ->
+                Column {
+                    Text(
+                        s?.name ?: stringResource(R.string.server_add_title),
+                        style = MaterialTheme.typography.titleMediumEmphasized,
+                        color = titleColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        s?.subtitle ?: stringResource(R.string.server_add_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = subtitleColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             Icon(
-                Icons.Rounded.UnfoldMore,
+                Icons.Rounded.ExpandMore,
                 contentDescription = stringResource(R.string.servers_title),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = subtitleColor,
+                modifier = Modifier.graphicsLayer { rotationZ = chevron },
             )
         }
     }

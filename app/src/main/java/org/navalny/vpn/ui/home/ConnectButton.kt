@@ -2,19 +2,15 @@ package org.navalny.vpn.ui.home
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -28,21 +24,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Matrix
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -50,91 +40,87 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.graphics.shapes.Morph
 import org.navalny.vpn.R
 import org.navalny.vpn.service.VpnStatus
-
-/** A Shape that renders a [Morph] between two MaterialShapes at [progress]. */
-private class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val path = morph.toPath(progress = progress, path = Path())
-        path.transform(Matrix().apply { scale(size.width, size.height) })
-        path.translate(size.center - path.getBounds().center)
-        return Outline.Generic(path)
-    }
-
-    private val Size.center get() = androidx.compose.ui.geometry.Offset(width / 2f, height / 2f)
-}
+import org.navalny.vpn.ui.components.MorphingShape
+import org.navalny.vpn.ui.components.Shapes
 
 /**
  * Big connect button — MD3 Expressive shape morphing:
- * Cookie (disconnected) → Soft burst (connected), with spring motion from the expressive
- * MotionScheme. The rotation runs ONLY while connecting; in idle / connected state there are
- * no running animations, so the UI does not render frames needlessly.
+ *  - idle: slowly cycles Cookie → Clover → Sunny → Cookie6 while rotating;
+ *  - pressed: squishes into a rounded square;
+ *  - connecting: quick burst morphs + fast spin + loading indicator;
+ *  - connected: soft burst ↔ cookie, the halo "breathes".
+ *
+ * With [animate] = false (setting "Animations") the button only morphs on state changes.
+ * All looping work stops automatically when the app is in background / the screen is off.
  */
 @Composable
 fun ConnectButton(
     status: VpnStatus,
     onClick: () -> Unit,
+    animate: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val connected = status is VpnStatus.Connected
     val busy = status is VpnStatus.Connecting || status is VpnStatus.Stopping
+    val error = status is VpnStatus.Error
     val haptics = LocalHapticFeedback.current
     val colors = MaterialTheme.colorScheme
 
-    val morph = remember { Morph(MaterialShapes.Cookie9Sided, MaterialShapes.SoftBurst) }
-    val progress by animateFloatAsState(
-        targetValue = if (connected) 1f else 0f,
-        animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
-        label = "morph",
-    )
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.92f else 1f,
+        targetValue = if (pressed) 0.9f else 1f,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
         label = "press",
     )
+
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<androidx.compose.ui.graphics.Color>()
     val container by animateColorAsState(
-        targetValue = when {
+        when {
             connected -> colors.primary
-            status is VpnStatus.Error -> colors.errorContainer
+            error -> colors.errorContainer
+            busy -> colors.secondaryContainer
             else -> colors.primaryContainer
         },
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "container",
+        effects, label = "container",
     )
     val content by animateColorAsState(
-        targetValue = when {
+        when {
             connected -> colors.onPrimary
-            status is VpnStatus.Error -> colors.onErrorContainer
+            error -> colors.onErrorContainer
+            busy -> colors.onSecondaryContainer
             else -> colors.onPrimaryContainer
         },
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "content",
+        effects, label = "content",
     )
     val halo by animateColorAsState(
-        targetValue = if (connected) colors.primary.copy(alpha = 0.16f) else colors.surfaceContainerHigh,
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "halo",
+        if (connected) colors.primary.copy(alpha = 0.18f) else colors.surfaceContainerHigh,
+        effects, label = "halo",
     )
 
-    val rotation = if (busy) {
-        val transition = rememberInfiniteTransition(label = "spin")
-        transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(tween(6000, easing = LinearEasing), RepeatMode.Restart),
-            label = "rotation",
-        ).value
-    } else {
-        0f
+    // Halo "breathing" while connected (only when animations are on and the app is visible).
+    val breath = remember { Animatable(1f) }
+    LaunchedEffect(connected, animate) {
+        if (connected && animate) {
+            while (true) {
+                breath.animateTo(1.06f, tween(1600, easing = FastOutSlowInEasing))
+                breath.animateTo(1f, tween(1600, easing = FastOutSlowInEasing))
+            }
+        } else {
+            breath.animateTo(1f)
+        }
     }
 
+    val bodyShapes = when {
+        pressed -> Shapes.Pressed
+        busy -> Shapes.ConnectBusy
+        connected -> Shapes.ConnectOn
+        error -> Shapes.ConnectError
+        else -> Shapes.ConnectIdle
+    }
     val label = stringResource(
         when (status) {
             is VpnStatus.Connected -> R.string.action_disconnect
@@ -146,26 +132,33 @@ fun ConnectButton(
 
     Box(
         modifier = modifier
-            .size(232.dp)
+            .size(240.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
-        // Halo
-        Box(
-            Modifier
-                .size(232.dp)
-                .graphicsLayer { rotationZ = -rotation / 2 }
-                .clip(MorphShape(morph, progress))
-                .background(halo),
+        MorphingShape(
+            shapes = if (connected) Shapes.HaloOn else Shapes.HaloIdle,
+            color = halo,
+            animate = animate,
+            holdMillis = 2600,
+            rotationMillis = if (busy) -6000 else -45000,
+            modifier = Modifier
+                .size(236.dp)
+                .graphicsLayer { scaleX = breath.value; scaleY = breath.value },
         )
-        // Button body
-        Box(
-            Modifier
-                .size(196.dp)
-                .graphicsLayer { rotationZ = rotation }
-                .clip(MorphShape(morph, progress))
-                .background(container),
+        MorphingShape(
+            shapes = bodyShapes,
+            color = container,
+            // the busy morph sequence runs even with animations off — it is the progress indicator
+            animate = animate || busy,
+            holdMillis = if (busy) 250 else 2200,
+            rotationMillis = when {
+                busy -> 3500
+                connected -> 24000
+                else -> 32000
+            },
+            modifier = Modifier.size(200.dp),
         )
         Box(
             Modifier
@@ -187,7 +180,7 @@ fun ConnectButton(
             AnimatedContent(
                 targetState = busy,
                 transitionSpec = {
-                    (fadeIn() + scaleIn(initialScale = 0.8f)) togetherWith (fadeOut() + scaleOut(targetScale = 0.8f))
+                    (fadeIn() + scaleIn(initialScale = 0.7f)) togetherWith (fadeOut() + scaleOut(targetScale = 0.7f))
                 },
                 label = "icon",
             ) { isBusy ->
@@ -195,19 +188,23 @@ fun ConnectButton(
                     if (isBusy) {
                         LoadingIndicator(color = content, modifier = Modifier.size(64.dp))
                     } else {
+                        val iconRotation by animateFloatAsState(
+                            // full turn — the symbol ends upright again
+                            if (connected) 360f else 0f,
+                            MaterialTheme.motionScheme.slowSpatialSpec(),
+                            label = "icon-rotation",
+                        )
                         Icon(
                             Icons.Rounded.PowerSettingsNew,
                             contentDescription = null,
                             tint = content,
-                            modifier = Modifier.size(56.dp),
+                            modifier = Modifier
+                                .size(56.dp)
+                                .graphicsLayer { rotationZ = iconRotation },
                         )
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.titleMediumEmphasized,
-                        color = content,
-                    )
+                    Text(label, style = MaterialTheme.typography.titleMediumEmphasized, color = content)
                 }
             }
         }

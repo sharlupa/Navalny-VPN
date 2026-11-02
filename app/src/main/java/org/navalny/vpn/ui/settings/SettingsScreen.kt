@@ -1,7 +1,6 @@
 package org.navalny.vpn.ui.settings
 
 import android.content.Intent
-import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,12 +16,12 @@ import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lan
 import androidx.compose.material.icons.rounded.Layers
-import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Animation
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Straighten
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VpnLock
-import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
@@ -127,10 +126,9 @@ fun SettingsScreen(vm: MainViewModel, contentPadding: PaddingValues, onAbout: ()
                 }
             }
             item {
-                val dynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                 SettingsGroup(stringResource(R.string.settings_group_appearance)) {
                     ChoiceItem(
-                        0, if (dynamicAvailable) 2 else 1, Icons.Rounded.Palette,
+                        0, 3, Icons.Rounded.DarkMode,
                         stringResource(R.string.settings_theme),
                         null,
                         ThemeMode.entries, s.theme,
@@ -139,18 +137,18 @@ fun SettingsScreen(vm: MainViewModel, contentPadding: PaddingValues, onAbout: ()
                                 ThemeMode.SYSTEM -> context.getString(R.string.theme_system)
                                 ThemeMode.LIGHT -> context.getString(R.string.theme_light)
                                 ThemeMode.DARK -> context.getString(R.string.theme_dark)
+                                ThemeMode.AMOLED -> context.getString(R.string.theme_amoled)
                             }
                         },
                         vm::setTheme,
                     )
-                    if (dynamicAvailable) {
-                        SwitchItem(
-                            1, 2, Icons.Rounded.Wallpaper,
-                            stringResource(R.string.settings_dynamic_color),
-                            stringResource(R.string.settings_dynamic_color_desc),
-                            s.dynamicColor, vm::setDynamicColor,
-                        )
-                    }
+                    PalettePicker(1, 3, s.palette, s.animations, vm::setPalette)
+                    SwitchItem(
+                        2, 3, Icons.Rounded.Animation,
+                        stringResource(R.string.settings_animations),
+                        stringResource(R.string.settings_animations_desc),
+                        s.animations, vm::setAnimations,
+                    )
                 }
             }
             item {

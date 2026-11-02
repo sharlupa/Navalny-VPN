@@ -29,6 +29,7 @@ import org.navalny.vpn.App
 import org.navalny.vpn.R
 import org.navalny.vpn.core.AppSettings
 import org.navalny.vpn.core.LinkParser
+import org.navalny.vpn.core.Palette
 import org.navalny.vpn.core.ProfilesState
 import org.navalny.vpn.core.ServerProfile
 import org.navalny.vpn.core.Subscription
@@ -296,7 +297,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setMtu(v: Int) = edit { settingsRepo.setMtu(v) }
     fun setAutoUpdate(v: Boolean) = viewModelScope.launch { settingsRepo.setAutoUpdate(v) }
     fun setTheme(v: ThemeMode) = viewModelScope.launch { settingsRepo.setTheme(v) }
-    fun setDynamicColor(v: Boolean) = viewModelScope.launch { settingsRepo.setDynamicColor(v) }
+    fun setPalette(v: Palette) = viewModelScope.launch { settingsRepo.setPalette(v) }
+    fun setAnimations(v: Boolean) = viewModelScope.launch { settingsRepo.setAnimations(v) }
 
     private fun edit(block: suspend () -> Unit) = viewModelScope.launch {
         block()

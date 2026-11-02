@@ -105,6 +105,11 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.graphics.shapes)
+    // Official Material color algorithms (HCT, dynamic schemes) — builds the named palettes
+    implementation(libs.material.color.utilities) {
+        // compile-time-only annotations of the library, not needed in the app
+        exclude(group = "dev.drewhamilton.poko")
+    }
 
     // QR: camera scanner (no Google Play Services needed) + decoding from gallery images.
     // The camera is only open while the scanner screen is shown.

@@ -28,8 +28,6 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ShortNavigationBar
-import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -49,6 +47,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.navalny.vpn.R
 import org.navalny.vpn.core.LinkParser
+import org.navalny.vpn.ui.components.NavItem
+import org.navalny.vpn.ui.components.SlidingNavigationBar
 import org.navalny.vpn.ui.exclusions.ExclusionsScreen
 import org.navalny.vpn.ui.home.HomeScreen
 import org.navalny.vpn.ui.settings.AboutScreen
@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
         setContent {
             val settings by vm.settings.collectAsStateWithLifecycle()
-            NavalnyTheme(themeMode = settings.theme, dynamicColor = settings.dynamicColor) {
+            NavalnyTheme(themeMode = settings.theme, palette = settings.palette) {
                 MainScreen(vm)
             }
         }
@@ -134,20 +134,16 @@ private fun MainScreen(vm: MainViewModel) {
         snackbarHost = { SnackbarHost(snackbar) },
         containerColor = MaterialTheme.colorScheme.surface,
         bottomBar = {
-            ShortNavigationBar {
-                Tab.entries.forEach { t ->
-                    val selected = t == tab
-                    ShortNavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            if (t != tab) tab = t
-                            if (t != Tab.SETTINGS) showAbout = false
-                        },
-                        icon = { Icon(if (selected) t.selectedIcon else t.icon, contentDescription = null) },
-                        label = { Text(stringResource(t.title)) },
-                    )
-                }
-            }
+            val items = Tab.entries.map { NavItem(stringResource(it.title), it.icon, it.selectedIcon) }
+            SlidingNavigationBar(
+                items = items,
+                selectedIndex = tab.ordinal,
+                onSelect = { i ->
+                    val t = Tab.entries[i]
+                    if (t != tab) tab = t
+                    if (t != Tab.SETTINGS) showAbout = false
+                },
+            )
         },
     ) { padding ->
         val enterSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
