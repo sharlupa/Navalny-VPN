@@ -18,8 +18,9 @@ android {
         applicationId = "org.navalny.vpn"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        // CI passes these on tag builds (v1.2.3 -> "1.2.3", run number -> code)
+        versionCode = providers.environmentVariable("VERSION_CODE").orNull?.toIntOrNull() ?: 1
+        versionName = providers.environmentVariable("VERSION_NAME").orNull ?: "1.0.0"
     }
 
     signingConfigs {

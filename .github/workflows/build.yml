@@ -3,6 +3,8 @@ name: Build
 on:
   push:
     branches: [ "**" ]
+    # Pushing a tag like v1.0.0 builds the APKs and publishes a GitHub Release with them.
+    tags: [ "v*" ]
   pull_request:
   workflow_dispatch:
 
@@ -18,6 +20,8 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: write   # needed to create the GitHub Release on tag builds
     steps:
       - uses: actions/checkout@v5
 
@@ -73,7 +77,10 @@ jobs:
         run: ./gradlew :app:testDebugUnitTest
 
       - name: Assemble release APKs
-        run: ./gradlew :app:assembleRelease
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then export VERSION_NAME="${GITHUB_REF_NAME#v}"; fi
+          export VERSION_CODE="$GITHUB_RUN_NUMBER"
+          ./gradlew :app:assembleRelease
 
       - uses: actions/upload-artifact@v5
         with:
@@ -85,3 +92,22 @@ jobs:
         with:
           name: libbox-aar
           path: app/libs/libbox.aar
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          for f in app/build/outputs/apk/release/*.apk; do
+            abi="$(basename "$f" .apk)"; abi="${abi#app-}"; abi="${abi%-release}"
+            cp "$f" "dist/NavalnyVPN-${VERSION}-${abi}.apk"
+          done
+          (cd dist && sha256sum *.apk > SHA256SUMS.txt)
+          NOTES=".github/release-notes/${GITHUB_REF_NAME}.md"
+          [ -f "$NOTES" ] || NOTES=".github/release-notes/default.md"
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "Navalny VPN ${VERSION}" \
+            --notes-file "$NOTES" \
+            --target "$GITHUB_SHA"
